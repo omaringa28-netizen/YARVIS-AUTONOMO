@@ -35,6 +35,12 @@ class YarvisService : Service() {
     private var esperandoOrden = false
 
     private val escuchaRunnable = Runnable { escuchar() }
+    private val finSesionRunnable = Runnable {
+    if (esperandoOrden) {
+        esperandoOrden = false
+        hablar("Vuelvo a quedar en espera. Di hola Yarvis para llamarme.")
+    }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -194,7 +200,50 @@ class YarvisService : Service() {
         }
     }
 
-    private fun procesarVoz(frase: String) {
+    
+private fun procesarVoz(frase: String) {
+    if (frase.isBlank()) {
+        programarEscucha(500)
+        return
+    }
+
+    val activadores = listOf(
+        "hola yarvis",
+        "ola yarvis",
+        "yarvis"
+    )
+
+    val activador = activadores.firstOrNull {
+        frase.contains(it)
+    }
+
+    if (activador != null) {
+        esperandoOrden = true
+        renovarSesion()
+
+        val orden = frase.substringAfter(activador).trim()
+
+        if (orden.isNotBlank()) {
+            procesarOrden(orden)
+        } else {
+            hablar("Hola. Estoy aquí. ¿Qué necesitas?")
+        }
+        return
+    }
+
+    if (esperandoOrden) {
+        renovarSesion()
+        procesarOrden(frase)
+    } else {
+        programarEscucha(500)
+    }
+}
+
+private fun renovarSesion() {
+    handler.removeCallbacks(finSesionRunnable)
+    handler.postDelayed(finSesionRunnable, 45000)
+}
+
         if (frase.isBlank()) {
             programarEscucha(500)
             return
@@ -238,7 +287,8 @@ class YarvisService : Service() {
             orden.contains("terminar conversacion")
         ) {
             esperandoOrden = false
-            hablar("De acuerdo. Aquí estaré.")
+handler.removeCallbacks(finSesionRunnable)
+hablar("De acuerdo. Aquí estaré.")
             return
         }
 
