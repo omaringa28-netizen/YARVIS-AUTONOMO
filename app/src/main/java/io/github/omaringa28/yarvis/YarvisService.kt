@@ -127,6 +127,22 @@ class YarvisService : Service() {
     }
 
     private fun normalizar(texto: String): String {
+    var resultado = Normalizer.normalize(
+        texto.lowercase(Locale.ROOT),
+        Normalizer.Form.NFD
+    ).replace(Regex("\\p{Mn}+"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    resultado = resultado
+        .replace("avre", "abre")
+        .replace("habre", "abre")
+        .replace("whast", "whatsapp")
+        .replace("guasap", "whatsapp")
+        .replace("wasap", "whatsapp")
+
+    return resultado
+    }
         return Normalizer.normalize(
             texto.lowercase(Locale.ROOT),
             Normalizer.Form.NFD
