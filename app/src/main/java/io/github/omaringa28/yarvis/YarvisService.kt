@@ -103,6 +103,8 @@ class YarvisService : Service() {
             .replace("jarvis", "yarvis")
             .replace("guasap", "whatsapp")
             .replace("wasap", "whatsapp")
+            .replace("toma una foto", "toma foto")
+.replace("saca una foto", "saca foto")
             .replace("simpmusic", "simpmusic")
     }
 
