@@ -37,5 +37,16 @@
             android:name=".YarvisService"
             android:exported="false"
             android:foregroundServiceType="microphone"/>
+        <service
+    android:name=".YarvisAccessibilityService"
+    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService"/>
+    </intent-filter>
+    <meta-data
+        android:name="android.accessibilityservice"
+        android:resource="@xml/yarvis_accessibility_config"/>
+</service>
     </application>
 </manifest>
