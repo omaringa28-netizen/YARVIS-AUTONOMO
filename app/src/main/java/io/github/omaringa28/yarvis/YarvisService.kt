@@ -17,6 +17,9 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import java.text.Normalizer
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class YarvisService : Service() {
@@ -31,6 +34,7 @@ class YarvisService : Service() {
     private var listening = false
     private var serviceActive = false
     private var ttsReady = false
+    private var esperandoOrden = false
 
     override fun onCreate() {
         super.onCreate()
@@ -122,6 +126,15 @@ class YarvisService : Service() {
         }
     }
 
+    private fun normalizar(texto: String): String {
+        return Normalizer.normalize(
+            texto.lowercase(Locale.ROOT),
+            Normalizer.Form.NFD
+        ).replace(Regex("\\p{Mn}+"), "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
     private fun crearReconocedor() {
         if (!serviceActive) return
 
@@ -162,17 +175,36 @@ class YarvisService : Service() {
                             SpeechRecognizer.RESULTS_RECOGNITION
                         )
 
-                        val frase = frases?.firstOrNull()
-                            ?.lowercase(Locale.ROOT) ?: ""
+                        val fraseOriginal = frases?.firstOrNull() ?: ""
+                        val frase = normalizar(fraseOriginal)
 
-                        if (
-                            frase.contains("hola yarvis") ||
-                            frase.contains("hola jarvis") ||
-                            frase.contains("hola yervis")
-                        ) {
-                            hablar(
-                                "Hola. Estoy aquí. ¿En qué puedo ayudarte?"
-                            )
+                        val activadores = listOf(
+                            "hola yarvis",
+                            "hola jarvis",
+                            "hola yervis"
+                        )
+
+                        val activador = activadores.firstOrNull {
+                            frase.contains(it)
+                        }
+
+                        if (activador != null) {
+                            val orden = frase.substringAfter(
+                                activador
+                            ).trim()
+
+                            if (orden.isNotBlank()) {
+                                esperandoOrden = false
+                                procesarOrden(orden)
+                            } else {
+                                esperandoOrden = true
+                                hablar(
+                                    "Hola. Estoy aquí. ¿Qué necesitas?"
+                                )
+                            }
+                        } else if (esperandoOrden && frase.isNotBlank()) {
+                            esperandoOrden = false
+                            procesarOrden(frase)
                         } else {
                             programarEscucha(600)
                         }
@@ -192,6 +224,117 @@ class YarvisService : Service() {
             recognizer = null
             listening = false
             programarEscucha(2500)
+        }
+    }
+
+    private fun procesarOrden(ordenOriginal: String) {
+        val orden = normalizar(ordenOriginal)
+
+        if (
+            orden.contains("que hora es") ||
+            orden.contains("dime la hora") ||
+            orden == "hora"
+        ) {
+            val hora = SimpleDateFormat(
+                "h:mm a",
+                Locale("es", "PE")
+            ).format(Date())
+
+            hablar("Son las $hora")
+            return
+        }
+
+        val ordenesAbrir = listOf(
+            "abre ",
+            "abrir ",
+            "inicia ",
+            "iniciar ",
+            "ejecuta ",
+            "ejecutar "
+        )
+
+        val inicio = ordenesAbrir.firstOrNull {
+            orden.startsWith(it)
+        }
+
+        if (inicio != null) {
+            var nombreApp = orden.removePrefix(inicio).trim()
+
+            nombreApp = nombreApp
+                .removePrefix("la aplicacion ")
+                .removePrefix("la app ")
+                .removePrefix("el aplicativo ")
+                .trim()
+
+            if (nombreApp.isNotBlank()) {
+                abrirAplicacion(nombreApp)
+            } else {
+                hablar("Dime qué aplicación quieres abrir.")
+            }
+            return
+        }
+
+        if (
+            orden.contains("gracias") ||
+            orden.contains("eso es todo")
+        ) {
+            esperandoOrden = false
+            hablar("De acuerdo. Aquí estaré.")
+            return
+        }
+
+        hablar(
+            "Todavía no tengo configurada esa orden. " +
+            "Por ahora puedo abrir aplicaciones y decirte la hora."
+        )
+    }
+
+    private fun abrirAplicacion(nombre: String) {
+        try {
+            val intentLanzador = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+
+            val aplicaciones = packageManager.queryIntentActivities(
+                intentLanzador,
+                0
+            )
+
+            val buscada = normalizar(nombre)
+
+            val aplicacion = aplicaciones.firstOrNull {
+                val etiqueta = normalizar(
+                    it.loadLabel(packageManager).toString()
+                )
+                etiqueta == buscada ||
+                    etiqueta.contains(buscada) ||
+                    buscada.contains(etiqueta)
+            }
+
+            if (aplicacion == null) {
+                hablar("No encuentro la aplicación $nombre.")
+                return
+            }
+
+            val paquete = aplicacion.activityInfo.packageName
+            val lanzamiento = packageManager.getLaunchIntentForPackage(
+                paquete
+            )
+
+            if (lanzamiento == null) {
+                hablar("No puedo abrir esa aplicación.")
+                return
+            }
+
+            lanzamiento.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(lanzamiento)
+            hablar("Abriendo ${aplicacion.loadLabel(packageManager)}.")
+
+        } catch (_: Exception) {
+            hablar(
+                "Android no permitió abrir esa aplicación " +
+                "con la pantalla apagada."
+            )
         }
     }
 
