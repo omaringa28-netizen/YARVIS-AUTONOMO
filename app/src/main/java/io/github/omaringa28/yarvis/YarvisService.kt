@@ -24,69 +24,61 @@ import java.util.Locale
 
 class YarvisService : Service() {
 
-    private val channelId = "yarvis_service"
     private val handler = Handler(Looper.getMainLooper())
-    private val escuchaRunnable = Runnable { escuchar() }
-
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private var listening = false
-    private var serviceActive = false
-    private var ttsReady = false
+    private var activo = false
+    private var escuchando = false
+    private var vozLista = false
     private var esperandoOrden = false
+
+    private val escuchaRunnable = Runnable { escuchar() }
 
     override fun onCreate() {
         super.onCreate()
 
-        serviceActive = true
+        activo = true
         crearNotificacion()
         mantenerProcesadorActivo()
         iniciarVoz()
         crearReconocedor()
-        programarEscucha(1200)
+        programarEscucha(1500)
     }
 
     private fun crearNotificacion() {
-        val manager =
-            getSystemService(NotificationManager::class.java)
+        val manager = getSystemService(NotificationManager::class.java)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Servicio YARVIS",
-                NotificationManager.IMPORTANCE_LOW
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    "yarvis_service",
+                    "Servicio YARVIS",
+                    NotificationManager.IMPORTANCE_LOW
+                )
             )
-            manager.createNotificationChannel(channel)
         }
 
-        val notification =
+        val notificacion =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Notification.Builder(this, channelId)
-                    .setContentTitle("YARVIS está activo")
-                    .setContentText("Preparado para escuchar tu voz")
-                    .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                    .setOngoing(true)
-                    .build()
+                Notification.Builder(this, "yarvis_service")
             } else {
                 Notification.Builder(this)
-                    .setContentTitle("YARVIS está activo")
-                    .setContentText("Preparado para escuchar tu voz")
-                    .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                    .setOngoing(true)
-                    .build()
             }
+                .setContentTitle("YARVIS está activo")
+                .setContentText("Preparado para escuchar tu voz")
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setOngoing(true)
+                .build()
 
-        startForeground(1, notification)
+        startForeground(1, notificacion)
     }
 
     private fun mantenerProcesadorActivo() {
         try {
-            val powerManager =
-                getSystemService(POWER_SERVICE) as PowerManager
-
-            wakeLock = powerManager.newWakeLock(
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "YARVIS::ReconocimientoVoz"
             ).apply {
@@ -98,44 +90,47 @@ class YarvisService : Service() {
         }
     }
 
+    private fun normalizar(texto: String): String {
+        return Normalizer.normalize(
+            texto.lowercase(Locale.ROOT),
+            Normalizer.Form.NFD
+        )
+            .replace(Regex("\\p{Mn}+"), "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .replace("avre", "abre")
+            .replace("habre", "abre")
+            .replace("jarvis", "yarvis")
+            .replace("guasap", "whatsapp")
+            .replace("wasap", "whatsapp")
+            .replace("simpmusic", "simpmusic")
+    }
+
     private fun iniciarVoz() {
-        tts = TextToSpeech(this) { result ->
+        tts = TextToSpeech(this) { resultado ->
+            if (resultado == TextToSpeech.SUCCESS) {
+                tts?.language = Locale("es", "PE")
+                tts?.setSpeechRate(0.88f)
+                tts?.setPitch(0.75f)
 
-            if (result == TextToSpeech.SUCCESS) {
-                val motor = tts ?: return@TextToSpeech
-
-                motor.language = Locale("es", "PE")
-                motor.setSpeechRate(0.88f)
-                motor.setPitch(0.75f)
-
-                motor.setOnUtteranceProgressListener(
+                tts?.setOnUtteranceProgressListener(
                     object : UtteranceProgressListener() {
+                        override fun onStart(id: String?) {}
 
-                        override fun onStart(
-                            utteranceId: String?
-                        ) {}
-
-                        override fun onDone(
-                            utteranceId: String?
-                        ) {
+                        override fun onDone(id: String?) {
                             handler.post {
                                 programarEscucha(700)
                             }
                         }
 
                         @Deprecated("Deprecated in Java")
-                        override fun onError(
-                            utteranceId: String?
-                        ) {
+                        override fun onError(id: String?) {
                             handler.post {
                                 programarEscucha(1000)
                             }
                         }
 
-                        override fun onError(
-                            utteranceId: String?,
-                            errorCode: Int
-                        ) {
+                        override fun onError(id: String?, errorCode: Int) {
                             handler.post {
                                 programarEscucha(1000)
                             }
@@ -143,145 +138,107 @@ class YarvisService : Service() {
                     }
                 )
 
-                ttsReady = true
+                vozLista = true
             }
         }
     }
 
-    private fun normalizar(texto: String): String {
-        var resultado = Normalizer.normalize(
-            texto.lowercase(Locale.ROOT),
-            Normalizer.Form.NFD
-        ).replace(Regex("\\p{Mn}+"), "")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-
-        resultado = resultado
-            .replace("avre", "abre")
-            .replace("habre", "abre")
-            .replace("whast", "whatsapp")
-            .replace("guasap", "whatsapp")
-            .replace("wasap", "whatsapp")
-            .replace("guasapp", "whatsapp")
-
-        return resultado
-    }
-
     private fun crearReconocedor() {
-        if (!serviceActive) return
-
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            recognizer = null
-            programarEscucha(5000)
+        if (!activo || !SpeechRecognizer.isRecognitionAvailable(this)) {
+            programarEscucha(4000)
             return
         }
 
         try {
-            recognizer =
-                SpeechRecognizer.createSpeechRecognizer(this)
+            recognizer?.destroy()
+            recognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
             recognizer?.setRecognitionListener(
                 object : RecognitionListener {
-
-                    override fun onReadyForSpeech(
-                        params: Bundle?
-                    ) {
-                        listening = true
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        escuchando = true
                     }
 
                     override fun onBeginningOfSpeech() {}
-
-                    override fun onRmsChanged(
-                        rmsdB: Float
-                    ) {}
-
-                    override fun onBufferReceived(
-                        buffer: ByteArray?
-                    ) {}
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
 
                     override fun onEndOfSpeech() {
-                        listening = false
+                        escuchando = false
                     }
 
                     override fun onError(error: Int) {
-                        listening = false
-                        reiniciarReconocedor()
-                        programarEscucha(1600)
+                        escuchando = false
+                        programarEscucha(1500)
                     }
 
-                    override fun onResults(
-                        results: Bundle?
-                    ) {
-                        listening = false
+                    override fun onResults(results: Bundle?) {
+                        escuchando = false
 
-                        val frases = results?.getStringArrayList(
+                        val texto = results?.getStringArrayList(
                             SpeechRecognizer.RESULTS_RECOGNITION
-                        )
+                        )?.firstOrNull().orEmpty()
 
-                        val fraseOriginal =
-                            frases?.firstOrNull() ?: ""
-
-                        val frase = normalizar(fraseOriginal)
-
-                        val activadores = listOf(
-                            "hola yarvis",
-                            "hola jarvis",
-                            "hola yervis",
-                            "ola yarvis",
-                            "ola jarvis"
-                        )
-
-                        val activador = activadores.firstOrNull {
-                            frase.contains(it)
-                        }
-
-                        if (activador != null) {
-
-                            val orden = frase
-                                .substringAfter(activador)
-                                .trim()
-
-                            if (orden.isNotBlank()) {
-                                esperandoOrden = false
-                                procesarOrden(orden)
-                            } else {
-                                esperandoOrden = true
-                                hablar(
-                                    "Hola. Estoy aquí. ¿Qué necesitas?"
-                                )
-                            }
-
-                        } else if (
-                            esperandoOrden && frase.isNotBlank()
-                        ) {
-                            esperandoOrden = false
-                            procesarOrden(frase)
-
-                        } else {
-                            programarEscucha(600)
-                        }
+                        procesarVoz(normalizar(texto))
                     }
 
-                    override fun onPartialResults(
-                        partialResults: Bundle?
-                    ) {}
-
-                    override fun onEvent(
-                        eventType: Int,
-                        params: Bundle?
-                    ) {}
+                    override fun onPartialResults(results: Bundle?) {}
+                    override fun onEvent(type: Int, params: Bundle?) {}
                 }
             )
-
         } catch (_: Exception) {
             recognizer = null
-            listening = false
-            programarEscucha(2500)
+            programarEscucha(3000)
         }
     }
 
-    private fun procesarOrden(ordenOriginal: String) {
-        val orden = normalizar(ordenOriginal)
+    private fun procesarVoz(frase: String) {
+        if (frase.isBlank()) {
+            programarEscucha(500)
+            return
+        }
+
+        val activadores = listOf(
+            "hola yarvis",
+            "ola yarvis",
+            "yarvis"
+        )
+
+        val activador = activadores.firstOrNull {
+            frase.contains(it)
+        }
+
+        if (activador != null) {
+            esperandoOrden = true
+            val orden = frase.substringAfter(activador).trim()
+
+            if (orden.isNotBlank()) {
+                procesarOrden(orden)
+            } else {
+                hablar("Hola. Estoy aquí. ¿Qué necesitas?")
+            }
+            return
+        }
+
+        if (esperandoOrden) {
+            procesarOrden(frase)
+        } else {
+            programarEscucha(500)
+        }
+    }
+
+    private fun procesarOrden(texto: String) {
+        val orden = normalizar(texto)
+
+        if (
+            orden.contains("gracias") ||
+            orden.contains("eso es todo") ||
+            orden.contains("terminar conversacion")
+        ) {
+            esperandoOrden = false
+            hablar("De acuerdo. Aquí estaré.")
+            return
+        }
 
         if (
             orden.contains("que hora es") ||
@@ -297,7 +254,36 @@ class YarvisService : Service() {
             return
         }
 
-        val ordenesAbrir = listOf(
+        val servicio = YarvisAccessibilityService.instancia
+
+        if (orden.contains("toma foto") ||
+            orden.contains("tomar foto") ||
+            orden.contains("saca foto") ||
+            orden.contains("captura")) {
+
+            if (servicio?.ejecutarAccion(orden) == true) {
+                hablar("Tomando la foto.")
+            } else {
+                hablar("No pude encontrar el botón de captura.")
+            }
+            return
+        }
+
+        if (orden.contains("sal de camara") ||
+            orden.contains("salir de camara") ||
+            orden.contains("cierra camara") ||
+            orden == "volver" ||
+            orden == "regresar") {
+
+            if (servicio?.ejecutarAccion(orden) == true) {
+                hablar("De acuerdo.")
+            } else {
+                hablar("No pude realizar esa acción.")
+            }
+            return
+        }
+
+        val prefijos = listOf(
             "abre ",
             "abrir ",
             "inicia ",
@@ -306,95 +292,43 @@ class YarvisService : Service() {
             "ejecutar "
         )
 
-        val inicio = ordenesAbrir.firstOrNull {
+        val prefijo = prefijos.firstOrNull {
             orden.startsWith(it)
         }
 
-        if (inicio != null) {
-            var nombreApp = orden.removePrefix(inicio).trim()
-
-            nombreApp = nombreApp
+        if (prefijo != null) {
+            val nombre = orden.removePrefix(prefijo)
                 .removePrefix("la aplicacion ")
                 .removePrefix("la app ")
-                .removePrefix("el aplicativo ")
-                .removePrefix("el ")
                 .trim()
 
-            if (nombreApp.isNotBlank()) {
-                abrirAplicacion(nombreApp)
-            } else {
-                hablar("Dime qué aplicación quieres abrir.")
-            }
-
+            abrirAplicacion(nombre)
             return
         }
 
-        if (
-            orden.contains("gracias") ||
-            orden.contains("eso es todo")
-        ) {
-            esperandoOrden = false
-            hablar("De acuerdo. Aquí estaré.")
-            return
-        }
-
-        hablar(
-            "Todavía no tengo configurada esa orden. " +
-            "Puedo abrir aplicaciones y decirte la hora."
-        )
+        hablar("Todavía no tengo configurada esa orden.")
     }
 
     private fun abrirAplicacion(nombre: String) {
         try {
             val buscada = normalizar(nombre)
 
-            val paquetesConocidos = mapOf(
-                "whatsapp" to "com.whatsapp",
-                "youtube" to "com.google.android.youtube",
-                "spotify" to "com.spotify.music",
-                "chrome" to "com.android.chrome"
-            )
-
-            val paqueteDirecto = paquetesConocidos.entries
-                .firstOrNull { (clave, _) ->
-                    buscada.contains(clave) ||
-                    clave.contains(buscada)
-                }?.value
-
-            val lanzamientoDirecto = paqueteDirecto?.let {
-                packageManager.getLaunchIntentForPackage(it)
-            }
-
-            if (lanzamientoDirecto != null) {
-                lanzamientoDirecto.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-                startActivity(lanzamientoDirecto)
-
-                hablar("Abriendo $nombre.")
-                return
-            }
-
-            val intentLanzador = Intent(
-                Intent.ACTION_MAIN
-            ).apply {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
 
-            val aplicaciones =
-                packageManager.queryIntentActivities(
-                    intentLanzador,
-                    0
-                )
+            val aplicaciones = packageManager.queryIntentActivities(
+                intent,
+                0
+            )
 
             val aplicacion = aplicaciones.firstOrNull {
                 val etiqueta = normalizar(
                     it.loadLabel(packageManager).toString()
                 )
-
                 etiqueta == buscada ||
-                etiqueta.contains(buscada) ||
-                buscada.contains(etiqueta)
+                    etiqueta.contains(buscada) ||
+                    buscada.contains(etiqueta)
             }
 
             if (aplicacion == null) {
@@ -402,132 +336,83 @@ class YarvisService : Service() {
                 return
             }
 
-            val paquete =
+            val lanzamiento = packageManager.getLaunchIntentForPackage(
                 aplicacion.activityInfo.packageName
-
-            val lanzamiento =
-                packageManager.getLaunchIntentForPackage(paquete)
+            )
 
             if (lanzamiento == null) {
                 hablar("No puedo abrir esa aplicación.")
                 return
             }
 
-            lanzamiento.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
-
+            lanzamiento.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(lanzamiento)
 
-            hablar(
-                "Abriendo ${
-                    aplicacion.loadLabel(packageManager)
-                }."
-            )
+            esperandoOrden = true
+            hablar("Abriendo ${aplicacion.loadLabel(packageManager)}.")
 
         } catch (_: Exception) {
-            hablar(
-                "Android no permitió abrir esa aplicación."
-            )
-        }
-    }
-
-    private fun reiniciarReconocedor() {
-        try {
-            recognizer?.cancel()
-            recognizer?.destroy()
-        } catch (_: Exception) {
-        }
-
-        recognizer = null
-        listening = false
-
-        crearReconocedor()
-    }
-
-    private fun programarEscucha(retardo: Long) {
-        if (!serviceActive) return
-
-        handler.removeCallbacks(escuchaRunnable)
-
-        handler.postDelayed(
-            escuchaRunnable,
-            retardo
-        )
-    }
-
-    private fun escuchar() {
-        if (!serviceActive || listening) return
-
-        if (recognizer == null) {
-            crearReconocedor()
-
-            if (recognizer == null) {
-                programarEscucha(5000)
-                return
-            }
-        }
-
-        val intent = Intent(
-            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-        ).apply {
-
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
-
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE,
-                "es-PE"
-            )
-
-            putExtra(
-                RecognizerIntent.EXTRA_MAX_RESULTS,
-                3
-            )
-
-            putExtra(
-                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-                true
-            )
-
-            putExtra(
-                RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-                1200L
-            )
-
-            putExtra(
-                RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                900L
-            )
-        }
-
-        try {
-            listening = true
-            recognizer?.startListening(intent)
-
-        } catch (_: Exception) {
-            listening = false
-            reiniciarReconocedor()
-            programarEscucha(2000)
+            hablar("Android no permitió abrir esa aplicación.")
         }
     }
 
     private fun hablar(mensaje: String) {
-        val motor = tts
-
-        if (!ttsReady || motor == null) {
-            programarEscucha(1200)
+        if (!vozLista || tts == null) {
+            programarEscucha(1000)
             return
         }
 
-        motor.speak(
+        tts?.speak(
             mensaje,
             TextToSpeech.QUEUE_FLUSH,
             null,
             "yarvis_respuesta"
         )
+    }
+
+    private fun programarEscucha(retardo: Long) {
+        if (!activo) return
+        handler.removeCallbacks(escuchaRunnable)
+        handler.postDelayed(escuchaRunnable, retardo)
+    }
+
+    private fun escuchar() {
+        if (!activo || escuchando) return
+
+        if (recognizer == null) {
+            crearReconocedor()
+            if (recognizer == null) return
+        }
+
+        val intent = Intent(
+            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+        ).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE,
+                "es-PE"
+            )
+            putExtra(
+                RecognizerIntent.EXTRA_MAX_RESULTS,
+                3
+            )
+            putExtra(
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                true
+            )
+        }
+
+        try {
+            escuchando = true
+            recognizer?.startListening(intent)
+        } catch (_: Exception) {
+            escuchando = false
+            recognizer = null
+            programarEscucha(2000)
+        }
     }
 
     override fun onStartCommand(
@@ -539,37 +424,26 @@ class YarvisService : Service() {
     }
 
     override fun onDestroy() {
-        serviceActive = false
-
+        activo = false
         handler.removeCallbacksAndMessages(null)
 
         try {
             recognizer?.cancel()
             recognizer?.destroy()
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) {}
 
         recognizer = null
-
         tts?.stop()
         tts?.shutdown()
-
         tts = null
-        ttsReady = false
 
         try {
-            if (wakeLock?.isHeld == true) {
-                wakeLock?.release()
-            }
-        } catch (_: Exception) {
-        }
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (_: Exception) {}
 
         wakeLock = null
-
         super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 }
