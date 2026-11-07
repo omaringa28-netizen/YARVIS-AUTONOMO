@@ -244,40 +244,6 @@ private fun renovarSesion() {
     handler.postDelayed(finSesionRunnable, 45000)
 }
 
-        if (frase.isBlank()) {
-            programarEscucha(500)
-            return
-        }
-
-        val activadores = listOf(
-            "hola yarvis",
-            "ola yarvis",
-            "yarvis"
-        )
-
-        val activador = activadores.firstOrNull {
-            frase.contains(it)
-        }
-
-        if (activador != null) {
-            esperandoOrden = true
-            val orden = frase.substringAfter(activador).trim()
-
-            if (orden.isNotBlank()) {
-                procesarOrden(orden)
-            } else {
-                hablar("Hola. Estoy aquí. ¿Qué necesitas?")
-            }
-            return
-        }
-
-        if (esperandoOrden) {
-            procesarOrden(frase)
-        } else {
-            programarEscucha(500)
-        }
-    }
-
     private fun procesarOrden(texto: String) {
         val orden = normalizar(texto)
 
