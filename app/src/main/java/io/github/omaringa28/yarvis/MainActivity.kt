@@ -1,6 +1,9 @@
 
 package io.github.omaringa28.yarvis
 
+import android.media.AudioManager
+import android.view.KeyEvent
+import java.text.Normalizer
 import android.app.Activity
 import android.os.Bundle
 import android.Manifest
@@ -452,6 +455,7 @@ class MainActivity : Activity() {
     }
 
     private fun consultarGemini(texto: String) {
+        if (ejecutarComandoLocal(texto)) return
         status.text = "YARVIS ESTÁ PENSANDO..."
         answer.text = "Analizando tu mensaje..."
         orb.setMode("thinking")
@@ -530,6 +534,99 @@ class MainActivity : Activity() {
             }
         }.start()
     }
+
+    
+private fun ejecutarComandoLocal(texto: String): Boolean {
+
+    val orden = Normalizer.normalize(
+        texto.lowercase(Locale.ROOT),
+        Normalizer.Form.NFD
+    ).replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+
+    when {
+        orden.contains("abre whatsapp") ->
+            abrirAplicacion("com.whatsapp", "WhatsApp")
+
+        orden.contains("abre youtube") ->
+            abrirAplicacion("com.google.android.youtube", "YouTube")
+
+        orden.contains("abre spotify") ->
+            abrirAplicacion("com.spotify.music", "Spotify")
+
+        orden.contains("abre chrome") ->
+            abrirAplicacion("com.android.chrome", "Chrome")
+
+        orden.contains("sube el volumen") ||
+        orden.contains("aumenta el volumen") -> {
+            cambiarVolumen(AudioManager.ADJUST_RAISE)
+            responderLocal("Subiendo el volumen.")
+        }
+
+        orden.contains("baja el volumen") ||
+        orden.contains("disminuye el volumen") -> {
+            cambiarVolumen(AudioManager.ADJUST_LOWER)
+            responderLocal("Bajando el volumen.")
+        }
+
+        orden.contains("pausa la musica") ||
+        orden.contains("reanuda la musica") ||
+        orden.contains("continua la musica") ||
+        orden.contains("reproduce musica") -> {
+            controlarMusica()
+            responderLocal("Enviando la orden al reproductor.")
+        }
+
+        else -> return false
+    }
+
+    return true
+}
+
+private fun abrirAplicacion(paquete: String, nombre: String) {
+    val intent = packageManager.getLaunchIntentForPackage(paquete)
+
+    if (intent != null) {
+        startActivity(intent)
+        responderLocal("Abriendo $nombre.")
+    } else {
+        responderLocal("No encuentro $nombre instalado.")
+    }
+}
+
+private fun cambiarVolumen(direccion: Int) {
+    val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+
+    audio.adjustStreamVolume(
+        AudioManager.STREAM_MUSIC,
+        direccion,
+        AudioManager.FLAG_SHOW_UI
+    )
+}
+
+private fun controlarMusica() {
+    val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+
+    audio.dispatchMediaKeyEvent(
+        KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+    )
+
+    audio.dispatchMediaKeyEvent(
+        KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+    )
+}
+
+private fun responderLocal(mensaje: String) {
+    answer.text = mensaje
+    status.text = "ORDEN EJECUTADA"
+    orb.setMode("speaking")
+
+    tts?.speak(
+        mensaje,
+        TextToSpeech.QUEUE_FLUSH,
+        null,
+        "orden_local"
+    )
+}
 
     private fun comprobarMicrofono() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
