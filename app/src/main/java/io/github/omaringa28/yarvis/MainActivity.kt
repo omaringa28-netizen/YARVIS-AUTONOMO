@@ -7,8 +7,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
-import android.view.View
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -33,8 +34,15 @@ class MainActivity : Activity() {
     private val voiceRequest = 200
     private val permissionRequest = 100
 
+    private val backgroundColor = Color.rgb(3, 8, 23)
+    private val cyan = Color.rgb(0, 220, 255)
+    private val blue = Color.rgb(0, 115, 255)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        window.statusBarColor = backgroundColor
+        window.navigationBarColor = backgroundColor
 
         tts = TextToSpeech(this) { result ->
             if (result == TextToSpeech.SUCCESS) {
@@ -44,101 +52,7 @@ class MainActivity : Activity() {
             }
         }
 
-        val fondo = Color.rgb(2, 8, 23)
-
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(24, 25, 24, 25)
-            setBackgroundColor(fondo)
-        }
-
-        val title = TextView(this).apply {
-            text = "Y A R V I S"
-            textSize = 31f
-            setTextColor(Color.CYAN)
-            gravity = Gravity.CENTER
-            letterSpacing = 0.18f
-        }
-
-        val subtitle = TextView(this).apply {
-            text = "ASISTENTE PERSONAL INTELIGENTE"
-            textSize = 11f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-        }
-
-        orb = OrbView(this)
-
-        status = TextView(this).apply {
-            text = "SISTEMA EN ESPERA"
-            textSize = 14f
-            setTextColor(Color.CYAN)
-            gravity = Gravity.CENTER
-        }
-
-        answer = TextView(this).apply {
-            text = "Hola. Soy YARVIS. Estoy preparado."
-            textSize = 16f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(8, 15, 8, 15)
-        }
-
-        message = EditText(this).apply {
-            hint = "Escribe tu pregunta..."
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
-            setSingleLine(false)
-        }
-
-        val send = Button(this).apply {
-            text = "ENVIAR A YARVIS"
-            setOnClickListener {
-                val text = message.text.toString().trim()
-                if (text.isNotEmpty()) consultarGemini(text)
-            }
-        }
-
-        val voice = Button(this).apply {
-            text = "🎙 HABLAR CON YARVIS"
-            setOnClickListener { comprobarMicrofono() }
-        }
-
-        val start = Button(this).apply {
-            text = "ACTIVAR SERVICIO"
-            setOnClickListener { activarServicio() }
-        }
-
-        val stop = Button(this).apply {
-            text = "DETENER SERVICIO"
-            setOnClickListener {
-                stopService(Intent(this@MainActivity, YarvisService::class.java))
-                status.text = "YARVIS EN ESPERA"
-                orb.setMode("idle")
-            }
-        }
-
-        layout.addView(title)
-        layout.addView(subtitle)
-
-        layout.addView(
-            orb,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(260)
-            )
-        )
-
-        layout.addView(status)
-        layout.addView(answer)
-        layout.addView(message)
-        layout.addView(send)
-        layout.addView(voice)
-        layout.addView(start)
-        layout.addView(stop)
-
-        setContentView(layout)
+        construirInterfaz()
 
         tts?.setOnUtteranceProgressListener(
             object : UtteranceProgressListener() {
@@ -152,7 +66,7 @@ class MainActivity : Activity() {
                 override fun onDone(id: String?) {
                     runOnUiThread {
                         orb.setMode("idle")
-                        status.text = "YARVIS EN LÍNEA"
+                        status.text = "SISTEMA EN LÍNEA"
                     }
                 }
 
@@ -165,6 +79,377 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
+
+    private fun fondo(
+        color1: Int,
+        color2: Int,
+        radius: Int = 22,
+        strokeColor: Int = Color.TRANSPARENT
+    ): GradientDrawable {
+        return GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(color1, color2)
+        ).apply {
+            cornerRadius = dp(radius).toFloat()
+            if (strokeColor != Color.TRANSPARENT) {
+                setStroke(dp(1), strokeColor)
+            }
+        }
+    }
+
+    private fun texto(
+        contenido: String,
+        size: Float,
+        color: Int,
+        bold: Boolean = false
+    ): TextView {
+        return TextView(this).apply {
+            text = contenido
+            textSize = size
+            setTextColor(color)
+            gravity = Gravity.CENTER
+            if (bold) {
+                typeface = Typeface.create(
+                    "sans-serif-medium", Typeface.BOLD
+                )
+            }
+        }
+    }
+
+    private fun boton(
+        contenido: String,
+        color1: Int,
+        color2: Int,
+        borde: Int = Color.TRANSPARENT
+    ): Button {
+        return Button(this).apply {
+            text = contenido
+            textSize = 13f
+            isAllCaps = false
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            background = fondo(color1, color2, 18, borde)
+            backgroundTintList = null
+            elevation = dp(5).toFloat()
+            minHeight = dp(52)
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+        }
+    }
+
+    private fun construirInterfaz() {
+
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(backgroundColor)
+            isFillViewport = true
+        }
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(25), dp(20), dp(30))
+        }
+
+        // ENCABEZADO
+
+        val marca = texto("Y A R V I S", 29f, cyan, true)
+        marca.letterSpacing = 0.22f
+
+        layout.addView(
+            marca,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(48)
+            )
+        )
+
+        val subtitulo = texto(
+            "ASISTENTE PERSONAL INTELIGENTE",
+            10f,
+            Color.LTGRAY
+        )
+        subtitulo.letterSpacing = 0.16f
+
+        layout.addView(subtitulo)
+
+        val linea = View(this).apply {
+            setBackgroundColor(Color.rgb(0, 115, 180))
+        }
+
+        val lineaParams = LinearLayout.LayoutParams(
+            dp(145), dp(1)
+        ).apply {
+            topMargin = dp(17)
+            bottomMargin = dp(18)
+        }
+        layout.addView(linea, lineaParams)
+
+        // ESTADO DEL SISTEMA
+
+        val estadoPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = fondo(
+                Color.rgb(8, 30, 53),
+                Color.rgb(5, 17, 35),
+                30,
+                Color.rgb(0, 110, 170)
+            )
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+        }
+
+        val punto = texto("●", 12f, Color.GREEN)
+        val estadoTexto = texto(
+            "GEMINI  •  SISTEMA DISPONIBLE",
+            11f,
+            Color.WHITE,
+            true
+        )
+
+        estadoPanel.addView(punto)
+        estadoPanel.addView(
+            estadoTexto,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { leftMargin = dp(8) }
+        )
+
+        layout.addView(estadoPanel)
+
+        // ESFERA HOLOGRÁFICA
+
+        orb = OrbView(this)
+
+        layout.addView(
+            orb,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(285)
+            ).apply {
+                topMargin = dp(12)
+                bottomMargin = dp(5)
+            }
+        )
+
+        status = texto(
+            "SISTEMA EN ESPERA",
+            12f,
+            cyan,
+            true
+        )
+        status.letterSpacing = 0.12f
+
+        layout.addView(
+            status,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(35)
+            )
+        )
+
+        // PANEL DE RESPUESTA
+
+        val answerPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = fondo(
+                Color.rgb(9, 24, 45),
+                Color.rgb(5, 13, 29),
+                20,
+                Color.rgb(0, 90, 145)
+            )
+            setPadding(dp(17), dp(15), dp(17), dp(15))
+        }
+
+        val answerTitle = texto(
+            "NÚCLEO DE RESPUESTA",
+            10f,
+            cyan,
+            true
+        )
+        answerTitle.gravity = Gravity.START
+
+        answer = texto(
+            "Hola. Soy YARVIS. Estoy preparado para ayudarte.",
+            15f,
+            Color.WHITE
+        )
+        answer.gravity = Gravity.START
+        answer.setLineSpacing(dp(4).toFloat(), 1f)
+
+        answerPanel.addView(answerTitle)
+
+        answerPanel.addView(
+            answer,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10) }
+        )
+
+        layout.addView(
+            answerPanel,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(12)
+                bottomMargin = dp(20)
+            }
+        )
+
+        // BARRA PARA ESCRIBIR
+
+        val inputTitle = texto(
+            "ESCRIBE TU MENSAJE",
+            10f,
+            Color.LTGRAY,
+            true
+        )
+        inputTitle.gravity = Gravity.START
+
+        layout.addView(
+            inputTitle,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(25)
+            )
+        )
+
+        val inputPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = fondo(
+                Color.rgb(12, 28, 49),
+                Color.rgb(7, 18, 34),
+                18,
+                Color.rgb(0, 135, 190)
+            )
+            setPadding(dp(12), dp(4), dp(5), dp(4))
+        }
+
+        message = EditText(this).apply {
+            hint = "Pregunta lo que quieras..."
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
+            textSize = 14f
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = null
+            minHeight = dp(52)
+        }
+
+        val send = boton(
+            "➤",
+            Color.rgb(0, 125, 230),
+            Color.rgb(0, 210, 255)
+        )
+
+        inputPanel.addView(
+            message,
+            LinearLayout.LayoutParams(0, dp(55), 1f)
+        )
+
+        inputPanel.addView(
+            send,
+            LinearLayout.LayoutParams(dp(58), dp(48))
+        )
+
+        send.setOnClickListener {
+            val question = message.text.toString().trim()
+            if (question.isNotEmpty()) {
+                consultarGemini(question)
+            }
+        }
+
+        layout.addView(
+            inputPanel,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(16) }
+        )
+
+        // BOTONES DE VOZ Y SERVICIO
+
+        val voice = boton(
+            "🎙  HABLAR CON YARVIS",
+            Color.rgb(0, 110, 205),
+            Color.rgb(0, 190, 230)
+        )
+
+        val start = boton(
+            "◉  ACTIVAR SERVICIO",
+            Color.rgb(10, 48, 78),
+            Color.rgb(5, 25, 48),
+            Color.rgb(0, 170, 210)
+        )
+
+        val stop = boton(
+            "■  DETENER SERVICIO",
+            Color.rgb(55, 23, 40),
+            Color.rgb(35, 12, 27),
+            Color.rgb(160, 55, 90)
+        )
+
+        voice.setOnClickListener {
+            comprobarMicrofono()
+        }
+
+        start.setOnClickListener {
+            activarServicio()
+        }
+
+        stop.setOnClickListener {
+            stopService(Intent(this, YarvisService::class.java))
+            status.text = "YARVIS EN ESPERA"
+            orb.setMode("idle")
+        }
+
+        layout.addView(
+            voice,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(55)
+            ).apply { bottomMargin = dp(10) }
+        )
+
+        val controles = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        controles.addView(
+            start,
+            LinearLayout.LayoutParams(0, dp(53), 1f).apply {
+                rightMargin = dp(5)
+            }
+        )
+
+        controles.addView(
+            stop,
+            LinearLayout.LayoutParams(0, dp(53), 1f).apply {
+                leftMargin = dp(5)
+            }
+        )
+
+        layout.addView(controles)
+
+        val pie = texto(
+            "YARVIS AUTÓNOMO  •  INTELIGENCIA ARTIFICIAL",
+            9f,
+            Color.rgb(90, 130, 165)
+        )
+
+        layout.addView(
+            pie,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(48)
+            )
+        )
+
+        scroll.addView(layout)
+        setContentView(scroll)
+    }
 
     private fun consultarGemini(texto: String) {
         status.text = "YARVIS ESTÁ PENSANDO..."
@@ -196,7 +481,6 @@ class MainActivity : Activity() {
                 }
 
                 val code = connection.responseCode
-
                 val stream = if (code in 200..299) {
                     connection.inputStream
                 } else {
@@ -218,7 +502,7 @@ class MainActivity : Activity() {
                 val respuesta = json.optString("reply", "")
 
                 if (respuesta.isBlank()) {
-                    throw Exception("El servidor no devolvió una respuesta.")
+                    throw Exception("No recibí una respuesta.")
                 }
 
                 runOnUiThread {
@@ -297,6 +581,7 @@ class MainActivity : Activity() {
                 val phrases = data?.getStringArrayListExtra(
                     RecognizerIntent.EXTRA_RESULTS
                 )
+
                 val phrase = phrases?.firstOrNull()
 
                 if (!phrase.isNullOrBlank()) {
@@ -329,10 +614,16 @@ class MainActivity : Activity() {
     }
 
     private fun activarServicio() {
-        val intent = Intent(this, YarvisService::class.java)
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            comprobarMicrofono()
+            return
+        }
 
         try {
-            startForegroundService(intent)
+            startForegroundService(
+                Intent(this, YarvisService::class.java)
+            )
             status.text = "SERVICIO YARVIS INICIADO"
             orb.setMode("listening")
         } catch (e: Exception) {
@@ -341,7 +632,6 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
-        orb.setMode("idle")
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
@@ -354,8 +644,8 @@ class OrbView(context: android.content.Context) : View(context) {
     private var progress = 0f
     private var mode = "idle"
 
-    private val animator = android.animation.ValueAnimator
-        .ofFloat(0f, 1f).apply {
+    private val animator =
+        android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 2200
             repeatCount = android.animation.ValueAnimator.INFINITE
             addUpdateListener {
@@ -378,9 +668,11 @@ class OrbView(context: android.content.Context) : View(context) {
 
         val cx = width / 2f
         val cy = height / 2f
-        val base = min(width, height) * 0.28f
+        val base = min(width, height) * 0.27f
 
-        val pulse = ((sin(progress * Math.PI * 2) + 1) / 2).toFloat()
+        val pulse =
+            ((sin(progress * Math.PI * 2) + 1) / 2).toFloat()
+
         val scale = when (mode) {
             "listening" -> 1.08f + pulse * 0.08f
             "thinking" -> 0.95f + pulse * 0.12f
@@ -395,9 +687,10 @@ class OrbView(context: android.content.Context) : View(context) {
             else -> Color.rgb(0, 150, 255)
         }
 
-        // Resplandor exterior
+        // RESPLANDOR
+
         paint.shader = RadialGradient(
-            cx, cy, base * 2.1f,
+            cx, cy, base * 2.2f,
             intArrayOf(
                 Color.argb(100, 0, 160, 255),
                 Color.argb(25, 0, 100, 255),
@@ -406,10 +699,12 @@ class OrbView(context: android.content.Context) : View(context) {
             null,
             Shader.TileMode.CLAMP
         )
-        canvas.drawCircle(cx, cy, base * 2.1f, paint)
+
+        canvas.drawCircle(cx, cy, base * 2.2f, paint)
         paint.shader = null
 
-        // Ondas expansivas
+        // ONDAS LUMINOSAS
+
         for (i in 0..2) {
             val wave = (progress + i / 3f) % 1f
             val radius = base * (1.15f + wave * 0.9f)
@@ -420,22 +715,27 @@ class OrbView(context: android.content.Context) : View(context) {
             paint.color = Color.argb(
                 alpha.coerceIn(0, 255), 0, 190, 255
             )
+
             canvas.drawCircle(cx, cy, radius, paint)
         }
 
-        // Anillos
+        // ANILLOS
+
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 2f
         paint.color = color
+
         canvas.drawCircle(cx, cy, base * 1.08f * scale, paint)
 
         paint.strokeWidth = 4f
+
         val rect = RectF(
             cx - base * 1.35f,
             cy - base * 1.35f,
             cx + base * 1.35f,
             cy + base * 1.35f
         )
+
         canvas.drawArc(
             rect,
             progress * 360,
@@ -444,8 +744,10 @@ class OrbView(context: android.content.Context) : View(context) {
             paint
         )
 
-        // Esfera central
+        // ESFERA CENTRAL
+
         paint.style = Paint.Style.FILL
+
         paint.shader = RadialGradient(
             cx - base * 0.25f,
             cy - base * 0.3f,
@@ -463,7 +765,8 @@ class OrbView(context: android.content.Context) : View(context) {
         canvas.drawCircle(cx, cy, base * scale, paint)
         paint.shader = null
 
-        // Texto central
+        // NOMBRE CENTRAL
+
         paint.color = Color.WHITE
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = base * 0.23f
@@ -471,7 +774,12 @@ class OrbView(context: android.content.Context) : View(context) {
             "sans-serif-medium", Typeface.BOLD
         )
 
-        canvas.drawText("YARVIS", cx, cy + base * 0.08f, paint)
+        canvas.drawText(
+            "YARVIS",
+            cx,
+            cy + base * 0.08f,
+            paint
+        )
 
         paint.style = Paint.Style.FILL
     }
