@@ -31,6 +31,7 @@ class YarvisService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var wakeLock: PowerManager.WakeLock? = null
+
     private var listening = false
     private var serviceActive = false
     private var ttsReady = false
@@ -38,6 +39,7 @@ class YarvisService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+
         serviceActive = true
         crearNotificacion()
         mantenerProcesadorActivo()
@@ -47,7 +49,8 @@ class YarvisService : Service() {
     }
 
     private fun crearNotificacion() {
-        val manager = getSystemService(NotificationManager::class.java)
+        val manager =
+            getSystemService(NotificationManager::class.java)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -58,28 +61,31 @@ class YarvisService : Service() {
             manager.createNotificationChannel(channel)
         }
 
-        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, channelId)
-                .setContentTitle("YARVIS está activo")
-                .setContentText("Preparado para escuchar tu voz")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setOngoing(true)
-                .build()
-        } else {
-            Notification.Builder(this)
-                .setContentTitle("YARVIS está activo")
-                .setContentText("Preparado para escuchar tu voz")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setOngoing(true)
-                .build()
-        }
+        val notification =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Notification.Builder(this, channelId)
+                    .setContentTitle("YARVIS está activo")
+                    .setContentText("Preparado para escuchar tu voz")
+                    .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                    .setOngoing(true)
+                    .build()
+            } else {
+                Notification.Builder(this)
+                    .setContentTitle("YARVIS está activo")
+                    .setContentText("Preparado para escuchar tu voz")
+                    .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                    .setOngoing(true)
+                    .build()
+            }
 
         startForeground(1, notification)
     }
 
     private fun mantenerProcesadorActivo() {
         try {
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            val powerManager =
+                getSystemService(POWER_SERVICE) as PowerManager
+
             wakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "YARVIS::ReconocimientoVoz"
@@ -94,61 +100,71 @@ class YarvisService : Service() {
 
     private fun iniciarVoz() {
         tts = TextToSpeech(this) { result ->
+
             if (result == TextToSpeech.SUCCESS) {
                 val motor = tts ?: return@TextToSpeech
+
                 motor.language = Locale("es", "PE")
                 motor.setSpeechRate(0.88f)
                 motor.setPitch(0.75f)
 
                 motor.setOnUtteranceProgressListener(
                     object : UtteranceProgressListener() {
-                        override fun onStart(utteranceId: String?) {}
 
-                        override fun onDone(utteranceId: String?) {
-                            handler.post { programarEscucha(700) }
+                        override fun onStart(
+                            utteranceId: String?
+                        ) {}
+
+                        override fun onDone(
+                            utteranceId: String?
+                        ) {
+                            handler.post {
+                                programarEscucha(700)
+                            }
                         }
 
                         @Deprecated("Deprecated in Java")
-                        override fun onError(utteranceId: String?) {
-                            handler.post { programarEscucha(1000) }
+                        override fun onError(
+                            utteranceId: String?
+                        ) {
+                            handler.post {
+                                programarEscucha(1000)
+                            }
                         }
 
                         override fun onError(
                             utteranceId: String?,
                             errorCode: Int
                         ) {
-                            handler.post { programarEscucha(1000) }
+                            handler.post {
+                                programarEscucha(1000)
+                            }
                         }
                     }
                 )
+
                 ttsReady = true
             }
         }
     }
 
     private fun normalizar(texto: String): String {
-    var resultado = Normalizer.normalize(
-        texto.lowercase(Locale.ROOT),
-        Normalizer.Form.NFD
-    ).replace(Regex("\\p{Mn}+"), "")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-
-    resultado = resultado
-        .replace("avre", "abre")
-        .replace("habre", "abre")
-        .replace("whast", "whatsapp")
-        .replace("guasap", "whatsapp")
-        .replace("wasap", "whatsapp")
-
-    return resultado
-    }
-        return Normalizer.normalize(
+        var resultado = Normalizer.normalize(
             texto.lowercase(Locale.ROOT),
             Normalizer.Form.NFD
         ).replace(Regex("\\p{Mn}+"), "")
             .replace(Regex("\\s+"), " ")
             .trim()
+
+        resultado = resultado
+            .replace("avre", "abre")
+            .replace("habre", "abre")
+            .replace("whast", "whatsapp")
+            .replace("guasap", "whatsapp")
+            .replace("wasap", "whatsapp")
+            .replace("guasapp", "whatsapp")
+
+        return resultado
     }
 
     private fun crearReconocedor() {
@@ -161,18 +177,27 @@ class YarvisService : Service() {
         }
 
         try {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            recognizer =
+                SpeechRecognizer.createSpeechRecognizer(this)
 
             recognizer?.setRecognitionListener(
                 object : RecognitionListener {
 
-                    override fun onReadyForSpeech(params: Bundle?) {
+                    override fun onReadyForSpeech(
+                        params: Bundle?
+                    ) {
                         listening = true
                     }
 
                     override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
-                    override fun onBufferReceived(buffer: ByteArray?) {}
+
+                    override fun onRmsChanged(
+                        rmsdB: Float
+                    ) {}
+
+                    override fun onBufferReceived(
+                        buffer: ByteArray?
+                    ) {}
 
                     override fun onEndOfSpeech() {
                         listening = false
@@ -184,20 +209,26 @@ class YarvisService : Service() {
                         programarEscucha(1600)
                     }
 
-                    override fun onResults(results: Bundle?) {
+                    override fun onResults(
+                        results: Bundle?
+                    ) {
                         listening = false
 
                         val frases = results?.getStringArrayList(
                             SpeechRecognizer.RESULTS_RECOGNITION
                         )
 
-                        val fraseOriginal = frases?.firstOrNull() ?: ""
+                        val fraseOriginal =
+                            frases?.firstOrNull() ?: ""
+
                         val frase = normalizar(fraseOriginal)
 
                         val activadores = listOf(
                             "hola yarvis",
                             "hola jarvis",
-                            "hola yervis"
+                            "hola yervis",
+                            "ola yarvis",
+                            "ola jarvis"
                         )
 
                         val activador = activadores.firstOrNull {
@@ -205,9 +236,10 @@ class YarvisService : Service() {
                         }
 
                         if (activador != null) {
-                            val orden = frase.substringAfter(
-                                activador
-                            ).trim()
+
+                            val orden = frase
+                                .substringAfter(activador)
+                                .trim()
 
                             if (orden.isNotBlank()) {
                                 esperandoOrden = false
@@ -218,9 +250,13 @@ class YarvisService : Service() {
                                     "Hola. Estoy aquí. ¿Qué necesitas?"
                                 )
                             }
-                        } else if (esperandoOrden && frase.isNotBlank()) {
+
+                        } else if (
+                            esperandoOrden && frase.isNotBlank()
+                        ) {
                             esperandoOrden = false
                             procesarOrden(frase)
+
                         } else {
                             programarEscucha(600)
                         }
@@ -236,6 +272,7 @@ class YarvisService : Service() {
                     ) {}
                 }
             )
+
         } catch (_: Exception) {
             recognizer = null
             listening = false
@@ -280,6 +317,7 @@ class YarvisService : Service() {
                 .removePrefix("la aplicacion ")
                 .removePrefix("la app ")
                 .removePrefix("el aplicativo ")
+                .removePrefix("el ")
                 .trim()
 
             if (nombreApp.isNotBlank()) {
@@ -287,6 +325,7 @@ class YarvisService : Service() {
             } else {
                 hablar("Dime qué aplicación quieres abrir.")
             }
+
             return
         }
 
@@ -301,30 +340,61 @@ class YarvisService : Service() {
 
         hablar(
             "Todavía no tengo configurada esa orden. " +
-            "Por ahora puedo abrir aplicaciones y decirte la hora."
+            "Puedo abrir aplicaciones y decirte la hora."
         )
     }
 
     private fun abrirAplicacion(nombre: String) {
         try {
-            val intentLanzador = Intent(Intent.ACTION_MAIN).apply {
+            val buscada = normalizar(nombre)
+
+            val paquetesConocidos = mapOf(
+                "whatsapp" to "com.whatsapp",
+                "youtube" to "com.google.android.youtube",
+                "spotify" to "com.spotify.music",
+                "chrome" to "com.android.chrome"
+            )
+
+            val paqueteDirecto = paquetesConocidos.entries
+                .firstOrNull { (clave, _) ->
+                    buscada.contains(clave) ||
+                    clave.contains(buscada)
+                }?.value
+
+            val lanzamientoDirecto = paqueteDirecto?.let {
+                packageManager.getLaunchIntentForPackage(it)
+            }
+
+            if (lanzamientoDirecto != null) {
+                lanzamientoDirecto.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+                startActivity(lanzamientoDirecto)
+
+                hablar("Abriendo $nombre.")
+                return
+            }
+
+            val intentLanzador = Intent(
+                Intent.ACTION_MAIN
+            ).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
 
-            val aplicaciones = packageManager.queryIntentActivities(
-                intentLanzador,
-                0
-            )
-
-            val buscada = normalizar(nombre)
+            val aplicaciones =
+                packageManager.queryIntentActivities(
+                    intentLanzador,
+                    0
+                )
 
             val aplicacion = aplicaciones.firstOrNull {
                 val etiqueta = normalizar(
                     it.loadLabel(packageManager).toString()
                 )
+
                 etiqueta == buscada ||
-                    etiqueta.contains(buscada) ||
-                    buscada.contains(etiqueta)
+                etiqueta.contains(buscada) ||
+                buscada.contains(etiqueta)
             }
 
             if (aplicacion == null) {
@@ -332,24 +402,32 @@ class YarvisService : Service() {
                 return
             }
 
-            val paquete = aplicacion.activityInfo.packageName
-            val lanzamiento = packageManager.getLaunchIntentForPackage(
-                paquete
-            )
+            val paquete =
+                aplicacion.activityInfo.packageName
+
+            val lanzamiento =
+                packageManager.getLaunchIntentForPackage(paquete)
 
             if (lanzamiento == null) {
                 hablar("No puedo abrir esa aplicación.")
                 return
             }
 
-            lanzamiento.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            lanzamiento.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
             startActivity(lanzamiento)
-            hablar("Abriendo ${aplicacion.loadLabel(packageManager)}.")
+
+            hablar(
+                "Abriendo ${
+                    aplicacion.loadLabel(packageManager)
+                }."
+            )
 
         } catch (_: Exception) {
             hablar(
-                "Android no permitió abrir esa aplicación " +
-                "con la pantalla apagada."
+                "Android no permitió abrir esa aplicación."
             )
         }
     }
@@ -363,6 +441,7 @@ class YarvisService : Service() {
 
         recognizer = null
         listening = false
+
         crearReconocedor()
     }
 
@@ -370,7 +449,11 @@ class YarvisService : Service() {
         if (!serviceActive) return
 
         handler.removeCallbacks(escuchaRunnable)
-        handler.postDelayed(escuchaRunnable, retardo)
+
+        handler.postDelayed(
+            escuchaRunnable,
+            retardo
+        )
     }
 
     private fun escuchar() {
@@ -388,17 +471,32 @@ class YarvisService : Service() {
         val intent = Intent(
             RecognizerIntent.ACTION_RECOGNIZE_SPEECH
         ).apply {
+
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-PE")
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE,
+                "es-PE"
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_MAX_RESULTS,
+                3
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                true
+            )
+
             putExtra(
                 RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
                 1200L
             )
+
             putExtra(
                 RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
                 900L
@@ -408,6 +506,7 @@ class YarvisService : Service() {
         try {
             listening = true
             recognizer?.startListening(intent)
+
         } catch (_: Exception) {
             listening = false
             reiniciarReconocedor()
@@ -441,6 +540,7 @@ class YarvisService : Service() {
 
     override fun onDestroy() {
         serviceActive = false
+
         handler.removeCallbacksAndMessages(null)
 
         try {
@@ -453,6 +553,7 @@ class YarvisService : Service() {
 
         tts?.stop()
         tts?.shutdown()
+
         tts = null
         ttsReady = false
 
@@ -468,5 +569,7 @@ class YarvisService : Service() {
         super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
+    }
 }
