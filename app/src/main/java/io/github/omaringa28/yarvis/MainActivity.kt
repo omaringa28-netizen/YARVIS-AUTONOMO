@@ -380,7 +380,7 @@ class OrbView(context: android.content.Context) : View(context) {
         val cy = height / 2f
         val base = min(width, height) * 0.28f
 
-        val pulse = (sin(progress * Math.PI * 2) + 1) / 2
+        val pulse = ((sin(progress * Math.PI * 2) + 1) / 2).toFloat()
         val scale = when (mode) {
             "listening" -> 1.08f + pulse * 0.08f
             "thinking" -> 0.95f + pulse * 0.12f
