@@ -21,6 +21,9 @@ import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 
 class YarvisService : Service() {
 
@@ -324,9 +327,50 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
-        hablar("Todavía no tengo configurada esa orden.")
+        consultarCerebro(orden)
     }
 
+    private fun consultarCerebro(mensaje: String) {
+    Thread {
+        try {
+            val url = URL("https://yarvis-cerebro.omaringa28.workers.dev/")
+            val conexion = url.openConnection() as HttpURLConnection
+
+            conexion.requestMethod = "POST"
+            conexion.connectTimeout = 20000
+            conexion.readTimeout = 60000
+            conexion.doOutput = true
+            conexion.setRequestProperty("Content-Type", "application/json")
+
+            val datos = JSONObject()
+            datos.put("message", mensaje)
+
+            conexion.outputStream.use {
+                it.write(datos.toString().toByteArray(Charsets.UTF_8))
+            }
+
+            val respuesta = conexion.inputStream.bufferedReader().use {
+                it.readText()
+            }
+
+            val texto = JSONObject(respuesta).optString(
+                "reply",
+                "No recibí una respuesta."
+            )
+
+            handler.post {
+                hablar(texto)
+            }
+
+            conexion.disconnect()
+
+        } catch (e: Exception) {
+            handler.post {
+                hablar("No pude conectar con mi cerebro. Comprueba tu conexión a internet.")
+            }
+        }
+    }.start()
+    }
     private fun abrirAplicacion(nombre: String) {
         try {
             val buscada = normalizar(nombre)
