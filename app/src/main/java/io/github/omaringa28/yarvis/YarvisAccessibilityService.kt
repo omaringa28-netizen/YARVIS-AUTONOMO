@@ -177,7 +177,45 @@ class YarvisAccessibilityService : AccessibilityService() {
             if (encontrado != null) return encontrado
         }
 
-        return null
+                return null
+    }
+
+    // LEER ELEMENTOS VISIBLES DE CUALQUIER APLICACIÓN
+    fun leerPantalla(): String {
+        val raiz = rootInActiveWindow
+            ?: return "No puedo leer la pantalla actual."
+
+        val elementos = linkedSetOf<String>()
+
+        fun recorrer(nodo: AccessibilityNodeInfo) {
+            if (elementos.size >= 100) return
+
+            val texto = nodo.text?.toString()?.trim()
+            val descripcion = nodo.contentDescription?.toString()?.trim()
+
+            if (!texto.isNullOrBlank()) {
+                elementos.add(texto)
+            }
+
+            if (!descripcion.isNullOrBlank()) {
+                elementos.add(descripcion)
+            }
+
+            for (i in 0 until nodo.childCount) {
+                if (elementos.size >= 100) break
+
+                val hijo = nodo.getChild(i) ?: continue
+                recorrer(hijo)
+            }
+        }
+
+        recorrer(raiz)
+
+        return if (elementos.isEmpty()) {
+            "No encuentro textos ni botones visibles."
+        } else {
+            elementos.joinToString("\n").take(5000)
+        }
     }
 
     fun deslizarPantalla(direccion: String): Boolean {
