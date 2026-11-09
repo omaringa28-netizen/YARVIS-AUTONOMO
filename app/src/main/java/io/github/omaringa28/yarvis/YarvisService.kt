@@ -244,7 +244,7 @@ private fun procesarVoz(frase: String) {
 
 private fun renovarSesion() {
     handler.removeCallbacks(finSesionRunnable)
-    handler.postDelayed(finSesionRunnable, 45000)
+    handler.postDelayed(finSesionRunnable, 300000)
 }
 
     private fun procesarOrden(texto: String) {
