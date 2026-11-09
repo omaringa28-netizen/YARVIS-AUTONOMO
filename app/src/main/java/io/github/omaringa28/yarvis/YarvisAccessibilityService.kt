@@ -75,7 +75,30 @@ class YarvisAccessibilityService : AccessibilityService() {
     }
 
     fun pulsarPorNombre(nombre: String): Boolean {
-        return pulsarElemento(listOf(nombre.lowercase()))
+    val buscado = nombre.lowercase()
+
+    val alias = when {
+        buscado.contains("galeria") ||
+        buscado.contains("fotos") ||
+        buscado.contains("imagenes") ->
+            listOf("galería", "galeria", "fotos", "imágenes", "imagenes")
+
+        buscado.contains("camara") ->
+            listOf("cámara", "camara", "camera")
+
+        buscado.contains("ubicacion") ->
+            listOf("ubicación", "ubicacion", "location")
+
+        buscado.contains("contactos") ->
+            listOf("contactos", "contacts")
+
+        buscado.contains("documento") ->
+            listOf("documento", "documentos", "documents")
+
+        else -> listOf(buscado)
+    }
+
+    return pulsarElemento(alias)
     }
 
     private fun pulsarElemento(nombres: List<String>): Boolean {
