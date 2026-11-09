@@ -300,15 +300,38 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
+        
         // PULSAR O TOCAR ELEMENTOS
         if (
             orden.startsWith("pulsa ") ||
-            orden.startsWith("toca ")
+            orden.startsWith("toca ") ||
+            orden.startsWith("presiona ")
         ) {
             val elemento = orden
                 .removePrefix("pulsa ")
                 .removePrefix("toca ")
+                .removePrefix("presiona ")
+                .removePrefix("el boton de ")
+                .removePrefix("el boton ")
+                .removePrefix("boton de ")
+                .removePrefix("boton ")
                 .trim()
+
+            val nombreBoton = when {
+                elemento.contains("adjuntar") ||
+                elemento.contains("clip") -> "adjuntar"
+
+                elemento.contains("camara") -> "camara"
+
+                elemento.contains("galeria") ||
+                elemento.contains("fotos") -> "galeria"
+
+                elemento.contains("microfono") -> "microfono"
+
+                elemento.contains("buscar") -> "buscar"
+
+                else -> elemento
+            }
 
             val accionesProtegidas = listOf(
                 "enviar",
@@ -322,17 +345,19 @@ hablar("De acuerdo. Aquí estaré.")
             )
 
             if (accionesProtegidas.any {
-                    elemento.contains(it)
+                    nombreBoton.contains(it)
                 }) {
                 hablar("Esa acción necesita una confirmación adicional.")
             } else if (
-                servicio?.pulsarPorNombre(elemento) == true
+                servicio?.pulsarPorNombre(nombreBoton) == true
             ) {
                 hablar("De acuerdo.")
             } else {
-                hablar("No encuentro ese elemento en la pantalla.")
+                hablar("No encuentro ese botón en la pantalla.")
             }
             return
+        }
+
         }
 
         // DESLIZAR LA PANTALLA
