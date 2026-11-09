@@ -179,8 +179,17 @@ class YarvisService : Service() {
                     }
 
                     override fun onError(error: Int) {
-                        escuchando = false
-                        programarEscucha(1500)
+    escuchando = false
+
+    handler.post {
+        try {
+            recognizer?.cancel()
+            recognizer?.destroy()
+        } catch (_: Exception) {}
+
+        recognizer = null
+        programarEscucha(2000)
+    }
                     }
 
                     override fun onResults(results: Bundle?) {
