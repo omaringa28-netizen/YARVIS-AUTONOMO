@@ -277,6 +277,55 @@ hablar("De acuerdo. Aquí estaré.")
 
         
         val servicio = YarvisAccessibilityService.instancia
+                // NAVEGACIÓN GENERAL DE ANDROID
+        when {
+            orden.contains("volver al inicio") ||
+            orden.contains("ir al inicio") ||
+            orden.contains("pantalla principal") ||
+            orden.contains("sal de la aplicacion") ||
+            orden.contains("sal de la aplicación") -> {
+
+                if (servicio?.performGlobalAction(
+                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
+                    ) == true
+                ) {
+                    hablar("Volviendo al inicio.")
+                } else {
+                    hablar("No pude volver al inicio.")
+                }
+                return
+            }
+
+            orden == "volver" ||
+            orden == "regresar" ||
+            orden.contains("retrocede") -> {
+
+                if (servicio?.performGlobalAction(
+                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
+                    ) == true
+                ) {
+                    hablar("De acuerdo.")
+                } else {
+                    hablar("No pude retroceder.")
+                }
+                return
+            }
+
+            orden.contains("aplicaciones recientes") ||
+            orden.contains("ver aplicaciones abiertas") ||
+            orden.contains("mostrar aplicaciones") -> {
+
+                if (servicio?.performGlobalAction(
+                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
+                    ) == true
+                ) {
+                    hablar("Mostrando aplicaciones recientes.")
+                } else {
+                    hablar("No pude mostrar las aplicaciones recientes.")
+                }
+                return
+            }
+        }
 
         // ESCRIBIR TEXTO
         if (
