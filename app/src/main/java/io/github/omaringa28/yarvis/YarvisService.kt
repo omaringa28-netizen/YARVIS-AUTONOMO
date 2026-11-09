@@ -372,50 +372,67 @@ hablar("De acuerdo. Aquí estaré.")
     }.start()
     }
     private fun abrirAplicacion(nombre: String) {
-        try {
-            val buscada = normalizar(nombre)
+    try {
+        val buscada = normalizar(nombre)
+            .removePrefix("la aplicacion ")
+            .removePrefix("la app ")
+            .removePrefix("aplicacion ")
+            .removePrefix("app ")
+            .trim()
 
-            val intent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-
-            val aplicaciones = packageManager.queryIntentActivities(
-                intent,
-                0
-            )
-
-            val aplicacion = aplicaciones.firstOrNull {
-                val etiqueta = normalizar(
-                    it.loadLabel(packageManager).toString()
-                )
-                etiqueta == buscada ||
-                    etiqueta.contains(buscada) ||
-                    buscada.contains(etiqueta)
-            }
-
-            if (aplicacion == null) {
-                hablar("No encuentro la aplicación $nombre.")
-                return
-            }
-
-            val lanzamiento = packageManager.getLaunchIntentForPackage(
-                aplicacion.activityInfo.packageName
-            )
-
-            if (lanzamiento == null) {
-                hablar("No puedo abrir esa aplicación.")
-                return
-            }
-
-            lanzamiento.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(lanzamiento)
-
-            esperandoOrden = true
-            hablar("Abriendo ${aplicacion.loadLabel(packageManager)}.")
-
-        } catch (_: Exception) {
-            hablar("Android no permitió abrir esa aplicación.")
+        if (buscada.isBlank()) {
+            hablar("Dime qué aplicación quieres abrir.")
+            return
         }
+
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+
+        val aplicaciones = packageManager.queryIntentActivities(intent, 0)
+
+        val aplicacion = aplicaciones
+            .map { info ->
+                val etiqueta = normalizar(
+                    info.loadLabel(packageManager).toString()
+                )
+                val puntuacion = when {
+                    etiqueta == buscada -> 3
+                    etiqueta.startsWith(buscada) -> 2
+                    etiqueta.contains(buscada) -> 1
+                    buscada.contains(etiqueta) -> 1
+                    else -> 0
+                }
+                Pair(info, puntuacion)
+            }
+            .filter { it.second > 0 }
+            .maxByOrNull { it.second }
+            ?.first
+
+        if (aplicacion == null) {
+            hablar("No encuentro $nombre entre las aplicaciones disponibles.")
+            return
+        }
+
+        val paquete = aplicacion.activityInfo.packageName
+        val lanzamiento = packageManager.getLaunchIntentForPackage(paquete)
+
+        if (lanzamiento == null) {
+            hablar("Esta aplicación no permite abrirse directamente.")
+            return
+        }
+
+        lanzamiento.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(lanzamiento)
+
+        esperandoOrden = true
+        hablar("Abriendo ${aplicacion.loadLabel(packageManager)}.")
+
+    } catch (e: SecurityException) {
+        hablar("Android bloqueó la apertura de esa aplicación por seguridad.")
+    } catch (e: Exception) {
+        hablar("No pude abrir esa aplicación. Comprueba sus permisos.")
+    }
     }
 
     private fun hablar(mensaje: String) {
