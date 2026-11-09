@@ -424,20 +424,67 @@ hablar("De acuerdo. Aquí estaré.")
     private fun consultarCerebro(mensaje: String) {
     Thread {
         try {
-            val url = URL("https://yarvis-cerebro.omaringa28.workers.dev/")
+            val orden = mensaje.lowercase()
+
+            val necesitaPantalla = listOf(
+                "que ves",
+                "qué ves",
+                "lee la pantalla",
+                "lee pantalla",
+                "que hay en pantalla",
+                "qué hay en pantalla",
+                "pulsa",
+                "toca",
+                "busca",
+                "selecciona",
+                "donde esta",
+                "dónde está"
+            ).any { orden.contains(it) }
+
+            val pantalla = if (necesitaPantalla) {
+                YarvisAccessibilityService.instancia
+                    ?.leerPantalla()
+                    ?: "No tengo acceso a la pantalla."
+            } else {
+                ""
+            }
+
+            val mensajeCompleto = if (pantalla.isNotBlank()) {
+                """
+                $mensaje
+
+                INFORMACIÓN DE LA PANTALLA ACTUAL:
+                $pantalla
+
+                Utiliza esta información para entender la solicitud.
+                No afirmes que has pulsado algo si no lo has hecho.
+                """.trimIndent()
+            } else {
+                mensaje
+            }
+
+            val url = URL(
+                "https://yarvis-cerebro.omaringa28.workers.dev/"
+            )
+
             val conexion = url.openConnection() as HttpURLConnection
 
             conexion.requestMethod = "POST"
             conexion.connectTimeout = 20000
             conexion.readTimeout = 60000
             conexion.doOutput = true
-            conexion.setRequestProperty("Content-Type", "application/json")
+            conexion.setRequestProperty(
+                "Content-Type",
+                "application/json"
+            )
 
             val datos = JSONObject()
-            datos.put("message", mensaje)
+            datos.put("message", mensajeCompleto)
 
             conexion.outputStream.use {
-                it.write(datos.toString().toByteArray(Charsets.UTF_8))
+                it.write(
+                    datos.toString().toByteArray(Charsets.UTF_8)
+                )
             }
 
             val respuesta = conexion.inputStream.bufferedReader().use {
@@ -457,7 +504,9 @@ hablar("De acuerdo. Aquí estaré.")
 
         } catch (e: Exception) {
             handler.post {
-                hablar("No pude conectar con mi cerebro. Comprueba tu conexión a internet.")
+                hablar(
+                    "No pude conectar con mi cerebro. Comprueba tu conexión a internet."
+                )
             }
         }
     }.start()
