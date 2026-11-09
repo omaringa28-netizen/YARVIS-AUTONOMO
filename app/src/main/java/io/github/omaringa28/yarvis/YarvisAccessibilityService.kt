@@ -24,55 +24,71 @@ class YarvisAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {}
 
-    fun ejecutarAccion(orden: String): Boolean {
-        val comando = orden.lowercase()
+    
+fun ejecutarAccion(orden: String): Boolean {
+    val comando = orden.lowercase()
 
-        return when {
-            comando.contains("toma foto") ||
-            comando.contains("tomar foto") ||
-            comando.contains("captura") ||
-            comando.contains("saca foto") -> {
-                pulsarElemento(
-                    listOf(
-                        "tomar foto",
-                        "take picture",
-                        "capturar",
-                        "obturador",
-                        "shutter"
-                    )
-                )
-            }
-
-            comando.contains("sal de camara") ||
-            comando.contains("salir de camara") ||
-            comando.contains("cierra camara") -> {
-                performGlobalAction(GLOBAL_ACTION_HOME)
-            }
-
-            comando.contains("volver") ||
-            comando.contains("regresar") -> {
-                performGlobalAction(GLOBAL_ACTION_BACK)
-            }
-
-            comando.contains("desliza hacia arriba") -> {
-                deslizarPantalla("arriba")
-            }
-
-            comando.contains("desliza hacia abajo") -> {
-                deslizarPantalla("abajo")
-            }
-
-            comando.contains("desliza hacia la izquierda") -> {
-                deslizarPantalla("izquierda")
-            }
-
-            comando.contains("desliza hacia la derecha") -> {
-                deslizarPantalla("derecha")
-            }
-
-            else -> false
+    return when {
+        // REGRESAR A LA PANTALLA DE INICIO
+        comando.contains("regresar al inicio") ||
+        comando.contains("regresa a inicio") ||
+        comando.contains("volver al inicio") ||
+        comando.contains("vuelve al inicio") ||
+        comando.contains("ir al inicio") ||
+        comando.contains("pantalla principal") ||
+        comando.contains("pantalla de inicio") ||
+        comando == "inicio" ||
+        comando == "home" -> {
+            performGlobalAction(GLOBAL_ACTION_HOME)
         }
+
+        // TOMAR FOTOGRAFÍAS
+        comando.contains("toma foto") ||
+        comando.contains("tomar foto") ||
+        comando.contains("captura") ||
+        comando.contains("saca foto") -> {
+            pulsarElemento(
+                listOf(
+                    "tomar foto",
+                    "take picture",
+                    "capturar",
+                    "obturador",
+                    "shutter"
+                )
+            )
+        }
+
+        // SALIR DE LA CÁMARA
+        comando.contains("salir de camara") ||
+        comando.contains("salir de cámara") ||
+        comando.contains("cierra camara") ||
+        comando.contains("cierra cámara") -> {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        }
+
+        // REGRESAR A LA PANTALLA ANTERIOR
+        comando.contains("volver") ||
+        comando.contains("regresar") -> {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+
+        // DESLIZAMIENTOS
+        comando.contains("desliza hacia arriba") ->
+            deslizarPantalla("arriba")
+
+        comando.contains("desliza hacia abajo") ->
+            deslizarPantalla("abajo")
+
+        comando.contains("desliza hacia la izquierda") ->
+            deslizarPantalla("izquierda")
+
+        comando.contains("desliza hacia la derecha") ->
+            deslizarPantalla("derecha")
+
+        else -> false
     }
+}
+
 
     fun pulsarPorNombre(nombre: String): Boolean {
     val buscado = nombre.lowercase()
