@@ -358,8 +358,6 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
-        }
-
         // DESLIZAR LA PANTALLA
         if (
             orden.contains("desliza hacia arriba") ||
