@@ -275,27 +275,93 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
+        
         val servicio = YarvisAccessibilityService.instancia
 
-        if (orden.contains("toma foto") ||
-            orden.contains("tomar foto") ||
-            orden.contains("saca foto") ||
-            orden.contains("captura")) {
+        // ESCRIBIR TEXTO
+        if (
+            orden.startsWith("escribe ") ||
+            orden.startsWith("escribir ") ||
+            orden.startsWith("dicta ")
+        ) {
+            val texto = orden
+                .removePrefix("escribe ")
+                .removePrefix("escribir ")
+                .removePrefix("dicta ")
+                .trim()
 
-            if (servicio?.ejecutarAccion(orden) == true) {
-                hablar("Tomando la foto.")
+            if (texto.isBlank()) {
+                hablar("Dime qué texto quieres escribir.")
+            } else if (servicio?.escribirTexto(texto) == true) {
+                hablar("Texto escrito.")
             } else {
-                hablar("No pude encontrar el botón de captura.")
+                hablar("No encuentro un campo de texto disponible.")
             }
             return
         }
 
-        if (orden.contains("sal de camara") ||
+        // PULSAR O TOCAR ELEMENTOS
+        if (
+            orden.startsWith("pulsa ") ||
+            orden.startsWith("toca ")
+        ) {
+            val elemento = orden
+                .removePrefix("pulsa ")
+                .removePrefix("toca ")
+                .trim()
+
+            val accionesProtegidas = listOf(
+                "enviar",
+                "send",
+                "publicar",
+                "eliminar",
+                "borrar",
+                "comprar",
+                "pagar",
+                "confirmar"
+            )
+
+            if (accionesProtegidas.any {
+                    elemento.contains(it)
+                }) {
+                hablar("Esa acción necesita una confirmación adicional.")
+            } else if (
+                servicio?.pulsarPorNombre(elemento) == true
+            ) {
+                hablar("De acuerdo.")
+            } else {
+                hablar("No encuentro ese elemento en la pantalla.")
+            }
+            return
+        }
+
+        // DESLIZAR LA PANTALLA
+        if (
+            orden.contains("desliza hacia arriba") ||
+            orden.contains("desliza hacia abajo") ||
+            orden.contains("desliza hacia la izquierda") ||
+            orden.contains("desliza hacia la derecha")
+        ) {
+            if (servicio?.ejecutarAccion(orden) == true) {
+                hablar("De acuerdo.")
+            } else {
+                hablar("No pude realizar el desplazamiento.")
+            }
+            return
+        }
+
+        // CÁMARA Y NAVEGACIÓN
+        if (
+            orden.contains("toma foto") ||
+            orden.contains("tomar foto") ||
+            orden.contains("saca foto") ||
+            orden.contains("captura") ||
+            orden.contains("sal de camara") ||
             orden.contains("salir de camara") ||
             orden.contains("cierra camara") ||
             orden == "volver" ||
-            orden == "regresar") {
-
+            orden == "regresar"
+        ) {
             if (servicio?.ejecutarAccion(orden) == true) {
                 hablar("De acuerdo.")
             } else {
@@ -304,6 +370,7 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
+        // ABRIR APLICACIONES
         val prefijos = listOf(
             "abre ",
             "abrir ",
@@ -326,6 +393,7 @@ hablar("De acuerdo. Aquí estaré.")
             abrirAplicacion(nombre)
             return
         }
+
 
         consultarCerebro(orden)
     }
