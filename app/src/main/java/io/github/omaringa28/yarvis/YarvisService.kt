@@ -286,55 +286,62 @@ hablar("De acuerdo. Aquí estaré.")
 
         
         val servicio = YarvisAccessibilityService.instancia
-                // NAVEGACIÓN GENERAL DE ANDROID
+
+        // NAVEGACIÓN DEL TELÉFONO
         when {
+            orden.contains("regresar al inicio") ||
+            orden.contains("regresa al inicio") ||
+            orden.contains("regresa a inicio") ||
             orden.contains("volver al inicio") ||
+            orden.contains("vuelve al inicio") ||
             orden.contains("ir al inicio") ||
             orden.contains("pantalla principal") ||
-            orden.contains("sal de la aplicacion") ||
-            orden.contains("sal de la aplicación") -> {
+            orden.contains("pantalla de inicio") ||
+            orden == "inicio" ||
+            orden == "home" -> {
 
-                if (servicio?.performGlobalAction(
-                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
-                    ) == true
-                ) {
+                if (servicio == null) {
+                    hablar("Mi servicio de accesibilidad no está conectado.")
+                } else if (servicio.volverInicio()) {
                     hablar("Volviendo al inicio.")
                 } else {
-                    hablar("No pude volver al inicio.")
+                    hablar("Android no aceptó la acción de inicio.")
                 }
                 return
             }
 
             orden == "volver" ||
             orden == "regresar" ||
+            orden.contains("volver atras") ||
             orden.contains("retrocede") -> {
 
-                if (servicio?.performGlobalAction(
-                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
-                    ) == true
-                ) {
-                    hablar("De acuerdo.")
+                if (servicio == null) {
+                    hablar("Mi servicio de accesibilidad no está conectado.")
+                } else if (servicio.volverAtras()) {
+                    hablar("Volviendo atrás.")
                 } else {
-                    hablar("No pude retroceder.")
+                    hablar("Android no aceptó la acción de volver.")
                 }
                 return
             }
 
             orden.contains("aplicaciones recientes") ||
             orden.contains("ver aplicaciones abiertas") ||
-            orden.contains("mostrar aplicaciones") -> {
+            orden.contains("mostrar aplicaciones") ||
+            orden.contains("muestra recientes") ||
+            orden.contains("mostrar recientes") -> {
 
-                if (servicio?.performGlobalAction(
-                        android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
-                    ) == true
-                ) {
+                if (servicio == null) {
+                    hablar("Mi servicio de accesibilidad no está conectado.")
+                } else if (servicio.mostrarRecientes()) {
                     hablar("Mostrando aplicaciones recientes.")
                 } else {
-                    hablar("No pude mostrar las aplicaciones recientes.")
+                    hablar("Android no aceptó la acción de aplicaciones recientes.")
                 }
                 return
             }
         }
+
 
         // ESCRIBIR TEXTO
         if (
@@ -431,25 +438,23 @@ hablar("De acuerdo. Aquí estaré.")
             return
         }
 
-        // CÁMARA Y NAVEGACIÓN
-        if (
-            orden.contains("toma foto") ||
-            orden.contains("tomar foto") ||
-            orden.contains("saca foto") ||
-            orden.contains("captura") ||
-            orden.contains("sal de camara") ||
-            orden.contains("salir de camara") ||
-            orden.contains("cierra camara") ||
-            orden == "volver" ||
-            orden == "regresar"
-        ) {
-            if (servicio?.ejecutarAccion(orden) == true) {
-                hablar("De acuerdo.")
-            } else {
-                hablar("No pude realizar esa acción.")
-            }
-            return
-        }
+        // CÁMARA
+if (
+    orden.contains("toma foto") ||
+    orden.contains("tomar foto") ||
+    orden.contains("saca foto") ||
+    orden.contains("captura") ||
+    orden.contains("sal de camara") ||
+    orden.contains("salir de camara") ||
+    orden.contains("cierra camara")
+) {
+    if (servicio?.ejecutarAccion(orden) == true) {
+        hablar("De acuerdo.")
+    } else {
+        hablar("No pude realizar esa acción.")
+    }
+    return
+}
 
         // ABRIR APLICACIONES
         val prefijos = listOf(
