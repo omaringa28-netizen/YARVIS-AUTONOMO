@@ -46,22 +46,6 @@ fun ejecutarAccion(orden: String): Boolean {
     val comando = orden.lowercase()
 
     return when {
-        // REGRESAR A LA PANTALLA DE INICIO
-        comando.contains("regresar al inicio") ||
-        comando.contains("regresa al inicio") ||
-        comando.contains("regresa a inicio") ||
-        comando.contains("volver al inicio") ||
-        comando.contains("vuelve al inicio") ||
-        comando.contains("volver a inicio") ||
-        comando.contains("ir a inicio") ||
-        comando.contains("ir al inicio") ||
-        comando.contains("pantalla principal") ||
-        comando.contains("pantalla de inicio") ||
-        comando == "inicio" ||
-        comando == "home" -> {
-            performGlobalAction(GLOBAL_ACTION_HOME)
-        }
-
         // TOMAR FOTOGRAFÍAS
         comando.contains("toma foto") ||
         comando.contains("tomar foto") ||
@@ -80,16 +64,8 @@ fun ejecutarAccion(orden: String): Boolean {
 
         // SALIR DE LA CÁMARA
         comando.contains("salir de camara") ||
-        comando.contains("salir de cámara") ||
-        comando.contains("cierra camara") ||
-        comando.contains("cierra cámara") -> {
+        comando.contains("cierra camara") -> {
             performGlobalAction(GLOBAL_ACTION_HOME)
-        }
-
-        // REGRESAR A LA PANTALLA ANTERIOR
-        comando.contains("volver") ||
-        comando.contains("regresar") -> {
-            performGlobalAction(GLOBAL_ACTION_BACK)
         }
 
         // DESLIZAMIENTOS
@@ -108,7 +84,6 @@ fun ejecutarAccion(orden: String): Boolean {
         else -> false
     }
 }
-
 
     fun pulsarPorNombre(nombre: String): Boolean {
     val buscado = nombre.lowercase()
