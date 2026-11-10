@@ -31,9 +31,12 @@ fun ejecutarAccion(orden: String): Boolean {
     return when {
         // REGRESAR A LA PANTALLA DE INICIO
         comando.contains("regresar al inicio") ||
+        comando.contains("regresa al inicio") ||
         comando.contains("regresa a inicio") ||
         comando.contains("volver al inicio") ||
         comando.contains("vuelve al inicio") ||
+        comando.contains("volver a inicio") ||
+        comando.contains("ir a inicio") ||
         comando.contains("ir al inicio") ||
         comando.contains("pantalla principal") ||
         comando.contains("pantalla de inicio") ||
