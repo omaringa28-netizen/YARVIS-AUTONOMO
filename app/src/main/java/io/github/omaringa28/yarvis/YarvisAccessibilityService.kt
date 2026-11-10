@@ -15,10 +15,27 @@ class YarvisAccessibilityService : AccessibilityService() {
         var instancia: YarvisAccessibilityService? = null
     }
 
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        instancia = this
-    }
+    
+override fun onServiceConnected() {
+    super.onServiceConnected()
+    instancia = this
+}
+
+fun estaConectado(): Boolean {
+    return instancia === this
+}
+
+fun volverInicio(): Boolean {
+    return performGlobalAction(GLOBAL_ACTION_HOME)
+}
+
+fun volverAtras(): Boolean {
+    return performGlobalAction(GLOBAL_ACTION_BACK)
+}
+
+fun mostrarRecientes(): Boolean {
+    return performGlobalAction(GLOBAL_ACTION_RECENTS)
+}
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
