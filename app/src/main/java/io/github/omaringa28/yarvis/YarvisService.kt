@@ -287,25 +287,22 @@ hablar("De acuerdo. Aquí estaré.")
         
         val servicio = YarvisAccessibilityService.instancia
 
+        
         // NAVEGACIÓN DEL TELÉFONO
         when {
-            orden.contains("regresar al inicio") ||
-            orden.contains("regresa al inicio") ||
-            orden.contains("regresa a inicio") ||
-            orden.contains("volver al inicio") ||
-            orden.contains("vuelve al inicio") ||
-            orden.contains("ir al inicio") ||
+            orden.contains("inicio") ||
             orden.contains("pantalla principal") ||
             orden.contains("pantalla de inicio") ||
-            orden == "inicio" ||
+            orden.contains("volver a casa") ||
+            orden.contains("ir a casa") ||
             orden == "home" -> {
 
                 if (servicio == null) {
-                    hablar("Mi servicio de accesibilidad no está conectado.")
+                    hablar("El servicio de accesibilidad no está conectado.")
                 } else if (servicio.volverInicio()) {
                     hablar("Volviendo al inicio.")
                 } else {
-                    hablar("Android no aceptó la acción de inicio.")
+                    hablar("No pude ejecutar la acción de inicio.")
                 }
                 return
             }
@@ -313,14 +310,16 @@ hablar("De acuerdo. Aquí estaré.")
             orden == "volver" ||
             orden == "regresar" ||
             orden.contains("volver atras") ||
-            orden.contains("retrocede") -> {
+            orden.contains("regresar atras") ||
+            orden.contains("retrocede") ||
+            orden.contains("dar un paso atras") -> {
 
                 if (servicio == null) {
-                    hablar("Mi servicio de accesibilidad no está conectado.")
+                    hablar("El servicio de accesibilidad no está conectado.")
                 } else if (servicio.volverAtras()) {
                     hablar("Volviendo atrás.")
                 } else {
-                    hablar("Android no aceptó la acción de volver.")
+                    hablar("No pude ejecutar la acción de volver.")
                 }
                 return
             }
@@ -332,15 +331,16 @@ hablar("De acuerdo. Aquí estaré.")
             orden.contains("mostrar recientes") -> {
 
                 if (servicio == null) {
-                    hablar("Mi servicio de accesibilidad no está conectado.")
+                    hablar("El servicio de accesibilidad no está conectado.")
                 } else if (servicio.mostrarRecientes()) {
                     hablar("Mostrando aplicaciones recientes.")
                 } else {
-                    hablar("Android no aceptó la acción de aplicaciones recientes.")
+                    hablar("No pude mostrar las aplicaciones recientes.")
                 }
                 return
             }
         }
+
 
 
         // ESCRIBIR TEXTO
